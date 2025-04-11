@@ -6,7 +6,7 @@
 /*   By: ggalon <ggalon@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 16:51:40 by ggalon            #+#    #+#             */
-/*   Updated: 2025/04/11 14:17:26 by ggalon           ###   ########.fr       */
+/*   Updated: 2025/04/11 15:06:24 by ggalon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,8 @@ const MISSING_LEFT: &str = "Missing left operand";
 const INVALID_CHAR: &str = "Invalid character: ";
 const INVALID_EXPRESSION: &str = "Invalid RPN expression";
 const EMPTY_EXPRESSION: &str = "Empty expression";
+const EMPTY_LIST: &str = "Empty list";
+const UNSUPPORTED_TYPE: &str = "Unsupported node type";
 
 #[derive(Debug, Clone)]
 enum AST {
@@ -83,10 +85,10 @@ fn gray_code(n: u32) -> u32
 	return n ^ (n >> 1)
 }
 
-fn is_cond(c: char) -> bool
-{
-	return c == '1' || c == '0'
-}
+// fn is_cond(c: char) -> bool
+// {
+// 	return c == '1' || c == '0'
+// }
 
 fn is_var(c: char) -> bool
 {
@@ -107,15 +109,15 @@ fn btoc(b: bool) -> char
 	}	
 }
 
-fn ctob(c: char) -> bool
-{
-	match c
-	{
-		'1' => true,
-		'0' => false,
-		_ => panic!("Invalid character: {}", c),
-	}	
-}
+// fn ctob(c: char) -> bool
+// {
+// 	match c
+// 	{
+// 		'1' => true,
+// 		'0' => false,
+// 		_ => panic!("{}{}", INVALID_CHAR, c),
+// 	}	
+// }
 
 fn eval_formula_ast(node: &AST) -> bool
 {
@@ -128,13 +130,13 @@ fn eval_formula_ast(node: &AST) -> bool
         AST::Xor(left, right) => eval_formula_ast(left) ^ eval_formula_ast(right),
         AST::Implication(left, right) => !eval_formula_ast(left) || eval_formula_ast(right),
         AST::Equal(left, right) => eval_formula_ast(left) == eval_formula_ast(right),
-		_ => panic!("Non supported type"),
+		_ => panic!("{}", UNSUPPORTED_TYPE),
 	}
 }
 
 fn eval_formula(formula: &str) -> bool
 {
-    let ast = parse_rpn(formula, false).expect("Failed to parse formula");
+    let ast = parse_rpn(formula, false);
 
     eval_formula_ast(&ast)
 }
@@ -175,14 +177,14 @@ fn get_variables(formula: &str) -> (HashMap<char, u32>, Vec<char>)
         }
         else if !is_var(c) && !is_ops(c)
         {
-            panic!("Invalid character found: {}", c);
+            panic!("{}{}", INVALID_CHAR, c);
         }
     }
 
     (vars, var_order)
 }
 
-fn format_header(vars: &HashMap<char, u32>, var_order: &[char]) -> String
+fn format_header(var_order: &[char]) -> String
 {
     let mut output = String::new();
     
@@ -213,7 +215,7 @@ fn format_row(vars: &HashMap<char, u32>, var_order: &[char], result: bool) -> St
     output
 }
 
-fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> Result<AST, String>
+fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> AST
 {
 	let mut temp_str = String::from(formula);
 
@@ -225,12 +227,12 @@ fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> Result<AST, String>
 	parse_rpn(&temp_str, false)
 }
 
-fn print_truth_table(formula: &str) -> Result<String, String>
+fn print_truth_table(formula: &str) -> String
 {
     let mut output = String::new();
     let (mut vars, var_order) = get_variables(formula);
 
-    output.push_str(&format_header(&vars, &var_order));
+    output.push_str(&format_header(&var_order));
 
     for i in 0..2_u32.pow(var_order.len() as u32)
     {
@@ -241,13 +243,13 @@ fn print_truth_table(formula: &str) -> Result<String, String>
             vars.insert(*key, binary[index]);
         }
 
-        let ast = generate_ast(formula, &vars)?;
+        let ast = generate_ast(formula, &vars);
         output.push_str(&format_row(&vars, &var_order, eval_formula_ast(&ast)));
     }
-    Ok(output)
+    output
 }
 
-fn parse_rpn(formula: &str, normal: bool) -> Result<AST, String> {
+fn parse_rpn(formula: &str, normal: bool) -> AST {
     let mut stack = Vec::new();
     
     for c in formula.chars() {
@@ -255,12 +257,12 @@ fn parse_rpn(formula: &str, normal: bool) -> Result<AST, String> {
             'A'..='Z' => stack.push(AST::Variable(c)),
             '0' | '1' => stack.push(AST::Boolean(c == '1')),
             '!' => {
-                let operand = stack.pop().ok_or(MISSING_OPERAND.to_string())?;
+                let operand = stack.pop().expect(MISSING_OPERAND);
                 stack.push(negation(operand));
             }
             '&' | '|' | '>' | '=' | '^' => {
-                let right = stack.pop().ok_or(MISSING_RIGHT.to_string())?;
-                let left = stack.pop().ok_or(MISSING_LEFT.to_string())?;
+                let right = stack.pop().expect(MISSING_RIGHT);
+                let left = stack.pop().expect(MISSING_LEFT);
                 
                 let node = if normal {
                     handle_normal_operator(c, left, right)
@@ -270,13 +272,13 @@ fn parse_rpn(formula: &str, normal: bool) -> Result<AST, String> {
                 
                 stack.push(node);
             }
-            _ => return Err(format!("{}{}", INVALID_CHAR, c)),
+            _ => panic!("{}{}", INVALID_CHAR, c),
         }
     }
     
     match stack.len() {
-        1 => stack.pop().ok_or(EMPTY_EXPRESSION.to_string()),
-        _ => Err(INVALID_EXPRESSION.to_string()),
+        1 => stack.pop().expect(EMPTY_EXPRESSION),
+        _ => panic!("{}", INVALID_EXPRESSION),
     }
 }
 
@@ -352,7 +354,7 @@ fn to_nnf(node: AST) -> AST
         },
         AST::And(left, right) => AST::And(Box::new(to_nnf(*left)), Box::new(to_nnf(*right))),
         AST::Or(left, right) => AST::Or(Box::new(to_nnf(*left)), Box::new(to_nnf(*right))),
-		_ => panic!("Unsupported AST node type.")
+		_ => panic!("{}", UNSUPPORTED_TYPE)
     }
 }
 
@@ -371,9 +373,9 @@ fn build_right_associative_or(literals: Vec<AST>) -> AST
 {
     let mut literals = literals.into_iter().collect::<Vec<_>>();
     if literals.is_empty() {
-        panic!("No literals to build OR");
+        panic!("{}", EMPTY_LIST);
     }
-    let mut current = literals.pop().expect("Literals list is empty");
+    let mut current = literals.pop().expect(EMPTY_LIST);
     while let Some(lit) = literals.pop() {
         current = AST::Or(Box::new(lit), Box::new(current));
     }
@@ -395,9 +397,9 @@ fn build_right_associative_and(clauses: Vec<AST>) -> AST
 {
     let mut clauses = clauses.into_iter().collect::<Vec<_>>();
     if clauses.is_empty() {
-        panic!("No clauses to build AND");
+        panic!("{}", EMPTY_LIST);
     }
-    let mut current = clauses.pop().expect("Clauses list is empty");
+    let mut current = clauses.pop().expect(EMPTY_LIST);
     while let Some(clause) = clauses.pop() {
         current = AST::And(Box::new(clause), Box::new(current));
     }
@@ -439,26 +441,26 @@ fn to_cnf(node: AST) -> AST
                 }
             }
         }
-		_ => panic!("Unsupported AST node type.")
+		_ => panic!("{}", UNSUPPORTED_TYPE)
     }
 }
 
-fn negation_normal_form(formula: &str) -> Result<String, String>
+fn negation_normal_form(formula: &str) -> String
 {
-	let ast = parse_rpn(formula, true)?;
+	let ast = parse_rpn(formula, true);
 	let nnf_ast = to_nnf(ast);
-	Ok(nnf_ast.to_string())
+	nnf_ast.to_string()
 }
 
-fn conjunctive_normal_form(formula: &str) -> Result<String, String>
+fn conjunctive_normal_form(formula: &str) -> String
 {
-    let ast = parse_rpn(formula, true)?;
+    let ast = parse_rpn(formula, true);
     let nnf_ast = to_nnf(ast);
     let cnf_ast = to_cnf(nnf_ast);
-    Ok(cnf_ast.to_string())
+    cnf_ast.to_string()
 }
 
-fn sat(formula: &str) -> Result<bool, String>
+fn sat(formula: &str) -> bool
 {
 	let mut vars = get_variables(formula).0;
 
@@ -473,15 +475,15 @@ fn sat(formula: &str) -> Result<bool, String>
 			vars.insert(*key, binary[index]);
 		}
 
-		let ast = generate_ast(formula, &vars)?;
+		let ast = generate_ast(formula, &vars);
 
 		if eval_formula_ast(&ast)
 		{
-			return Ok(true);
+			return true;
 		}
 	}
 
-	Ok(false)
+	false
 
 }
 

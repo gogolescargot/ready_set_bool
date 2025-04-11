@@ -80,10 +80,7 @@ fn test_print_truth_table() {
     ];
 
     for (input, expected) in test_cases {
-        let result = match print_truth_table(input) {
-            Ok(res) => res,
-            Err(e) => panic!("Error for {}: {}", input, e),
-        };
+        let result = print_truth_table(input);
         assert_eq!(result, expected);
     }
 }
@@ -100,10 +97,7 @@ fn test_nnf() {
 	];
 
 	for (input, expected) in test_cases {
-		let result = match negation_normal_form(input) {
-			Ok(res) => res,
-			Err(e) => panic!("Error for {}: {}", input, e),
-		};
+		let result = negation_normal_form(input);
 		assert_eq!(result, expected);
 	}
 }
@@ -122,10 +116,7 @@ fn test_cnf() {
 	];
 
 	for (input, expected) in test_cases {
-		let result = match conjunctive_normal_form(input) {
-			Ok(res) => res,
-			Err(e) => panic!("Error for {}: {}", input, e),
-		};
+		let result = conjunctive_normal_form(input);
 		assert_eq!(result, expected);
 	}
 }
@@ -140,10 +131,7 @@ fn test_sat() {
 	];
 
 	for (input, expected) in test_cases {
-		let result = match sat(input) {
-			Ok(res) => res,
-			Err(e) => panic!("Error for {}: {}", input, e),
-		};
+		let result = sat(input);
 		assert_eq!(result, expected);
 	}
 }
