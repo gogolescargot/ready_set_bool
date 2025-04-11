@@ -6,26 +6,68 @@
 /*   By: ggalon <ggalon@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 16:51:40 by ggalon            #+#    #+#             */
-/*   Updated: 2025/04/09 14:16:35 by ggalon           ###   ########.fr       */
+/*   Updated: 2025/04/11 14:17:26 by ggalon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+mod test;
+
+use std::fmt;
 use std::collections::HashMap;
 
-fn adder(x: u32, y: u32) -> u32
+const MISSING_OPERAND: &str = "Missing operand for !";
+const MISSING_RIGHT: &str = "Missing right operand";
+const MISSING_LEFT: &str = "Missing left operand";
+const INVALID_CHAR: &str = "Invalid character: ";
+const INVALID_EXPRESSION: &str = "Invalid RPN expression";
+const EMPTY_EXPRESSION: &str = "Empty expression";
+
+#[derive(Debug, Clone)]
+enum AST {
+    Variable(char),
+	Boolean(bool),
+    Negation(Box<AST>),
+    And(Box<AST>, Box<AST>),
+    Or(Box<AST>, Box<AST>),
+	Xor(Box<AST>, Box<AST>),
+	Implication(Box<AST>, Box<AST>),
+	Equal(Box<AST>, Box<AST>)
+}
+
+impl fmt::Display for AST {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AST::Variable(c) => write!(f, "{}", c),
+			AST::Boolean(bool) => write!(f, "{}", if *bool { '1' } else { '0' }),
+            AST::Negation(child) => write!(f, "{}!", child),
+            AST::And(left, right) => write!(f, "{}{}&", left, right),
+            AST::Or(left, right) => write!(f, "{}{}|", left, right),
+			AST::Xor(left, right) => write!(f, "{}{}^", left, right),
+            AST::Implication(left, right) => write!(f, "{}{}>", left, right),
+            AST::Equal(left, right) => write!(f, "{}{}=", left, right),
+        }
+    }
+}
+
+fn adder(a: u32, b: u32) -> u32
 {
-	if y == 0
+	if b == 0
 	{
-		return x;
+		return a;
 	}
 	
-	let carry = (x & y) << 1;
+	let carry = (a & b) << 1;
 
-	return adder(x ^ y, carry)
+	return adder(a ^ b, carry)
 }
 
 fn multiplier(a: u32, b: u32) -> u32
 {
+	if b == 0
+	{
+		return 0;
+	}
+	
 	let mut result = a;
 
 	for _ in 1..b
@@ -75,45 +117,26 @@ fn ctob(c: char) -> bool
 	}	
 }
 
+fn eval_formula_ast(node: &AST) -> bool
+{
+	match node
+	{
+		AST::Boolean(bool) => *bool,
+        AST::Negation(child) => !eval_formula_ast(child),
+        AST::And(left, right) => eval_formula_ast(left) && eval_formula_ast(right),
+        AST::Or(left, right) => eval_formula_ast(left) || eval_formula_ast(right),
+        AST::Xor(left, right) => eval_formula_ast(left) ^ eval_formula_ast(right),
+        AST::Implication(left, right) => !eval_formula_ast(left) || eval_formula_ast(right),
+        AST::Equal(left, right) => eval_formula_ast(left) == eval_formula_ast(right),
+		_ => panic!("Non supported type"),
+	}
+}
+
 fn eval_formula(formula: &str) -> bool
 {
-	let mut stack: Vec<char> = Vec::new();
+    let ast = parse_rpn(formula, false).expect("Failed to parse formula");
 
-	for c in formula.chars()
-	{
-		if is_cond(c)
-		{
-			stack.push(c);
-		}
-		else
-		{
-			if stack.len() < 2
-			{
-				panic!("Wrong formula operands number");
-			}
-
-			let op1 = ctob(stack.pop().expect("Stack underflow"));
-			let op2 = ctob(stack.pop().expect("Stack underflow"));
-
-			match c
-			{
-				'!'=>stack.push(btoc(op1 != op2)),
-				'&'=>stack.push(btoc(op1 && op2)),
-				'|'=>stack.push(btoc(op1 || op2)),
-				'^'=>stack.push(btoc(op1 ^ op2)),
-				'>'=>stack.push(btoc(!op1 || op2)),
-				'='=>stack.push(btoc(op1 == op2)),
-				_ => panic!("Invalid character found: {}", c),
-			}
-		}
-	}
-
-	if stack.len() != 1
-	{
-		panic!("Wrong formula size at the end of computation");
-	}
-
-	return ctob(stack[0])
+    eval_formula_ast(&ast)
 }
 
 fn to_binary_list(mut num: u32, length: usize) -> Vec<u32>
@@ -138,228 +161,330 @@ fn to_binary_list(mut num: u32, length: usize) -> Vec<u32>
 	return binary_digits
 }
 
-fn print_header(vars: &HashMap<char, u32>)
+fn get_variables(formula: &str) -> (HashMap<char, u32>, Vec<char>)
 {
-	for key in vars.keys()
-	{
-		print!("| {} ", key);
-	}
-	println!("| = |");
-	for _ in 0..vars.len()
-	{
-		print!("|---");
-	}
-	println!("|---|");
+    let mut vars: HashMap<char, u32> = HashMap::new();
+    let mut var_order: Vec<char> = Vec::new();
+
+    for c in formula.chars()
+    {
+        if is_var(c) && !vars.contains_key(&c)
+        {
+            vars.insert(c, 0);
+            var_order.push(c);
+        }
+        else if !is_var(c) && !is_ops(c)
+        {
+            panic!("Invalid character found: {}", c);
+        }
+    }
+
+    (vars, var_order)
 }
 
-fn print_row(vars: &HashMap<char, u32>, result: bool)
+fn format_header(vars: &HashMap<char, u32>, var_order: &[char]) -> String
 {
-	for value in vars.values()
-	{
-		print!("| {} ", value);
-	}
-	println!("| {} |", btoc(result));
+    let mut output = String::new();
+    
+    for key in var_order {
+        output.push_str(&format!("| {} ", key));
+    }
+    output.push_str("| = |\n");
+    
+    for _ in 0..var_order.len() {
+        output.push_str("|---");
+    }
+    output.push_str("|---|\n");
+    
+    output
 }
 
-fn print_truth_table(formula: &str)
+fn format_row(vars: &HashMap<char, u32>, var_order: &[char], result: bool) -> String
 {
-	let mut vars: HashMap<char, u32> = HashMap::new();
+    let mut output = String::new();
+    
+    for key in var_order {
+        if let Some(value) = vars.get(key) {
+            output.push_str(&format!("| {} ", value));
+        }
+    }
+    output.push_str(&format!("| {} |\n", btoc(result)));
+    
+    output
+}
 
-	for c in formula.chars()
-	{
-		if is_var(c)
-		{
-			vars.insert(c, 0);
-		}
-		else if !is_ops(c)
-		{
-			panic!("Invalid character found: {}", c);
-		}
+fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> Result<AST, String>
+{
+	let mut temp_str = String::from(formula);
+
+	for (key, value) in vars.iter()
+	{		
+		temp_str = temp_str.replace(key.to_string().as_str(), value.to_string().as_str());
 	}
 
-	print_header(&vars);
+	parse_rpn(&temp_str, false)
+}
+
+fn print_truth_table(formula: &str) -> Result<String, String>
+{
+    let mut output = String::new();
+    let (mut vars, var_order) = get_variables(formula);
+
+    output.push_str(&format_header(&vars, &var_order));
+
+    for i in 0..2_u32.pow(var_order.len() as u32)
+    {
+        let binary: Vec<u32> = to_binary_list(i, var_order.len());
+
+        for (index, key) in var_order.iter().enumerate()
+        {
+            vars.insert(*key, binary[index]);
+        }
+
+        let ast = generate_ast(formula, &vars)?;
+        output.push_str(&format_row(&vars, &var_order, eval_formula_ast(&ast)));
+    }
+    Ok(output)
+}
+
+fn parse_rpn(formula: &str, normal: bool) -> Result<AST, String> {
+    let mut stack = Vec::new();
+    
+    for c in formula.chars() {
+        match c {
+            'A'..='Z' => stack.push(AST::Variable(c)),
+            '0' | '1' => stack.push(AST::Boolean(c == '1')),
+            '!' => {
+                let operand = stack.pop().ok_or(MISSING_OPERAND.to_string())?;
+                stack.push(negation(operand));
+            }
+            '&' | '|' | '>' | '=' | '^' => {
+                let right = stack.pop().ok_or(MISSING_RIGHT.to_string())?;
+                let left = stack.pop().ok_or(MISSING_LEFT.to_string())?;
+                
+                let node = if normal {
+                    handle_normal_operator(c, left, right)
+                } else {
+                    handle_standard_operator(c, left, right)
+                };
+                
+                stack.push(node);
+            }
+            _ => return Err(format!("{}{}", INVALID_CHAR, c)),
+        }
+    }
+    
+    match stack.len() {
+        1 => stack.pop().ok_or(EMPTY_EXPRESSION.to_string()),
+        _ => Err(INVALID_EXPRESSION.to_string()),
+    }
+}
+
+fn handle_normal_operator(op: char, left: AST, right: AST) -> AST {
+    match op {
+        '&' => and(left, right),
+        '|' => or(left, right),
+        '>' => implication(left, right),
+        '=' => equivalence(left, right),
+        '^' => xor(left, right),
+        _ => unreachable!(),
+    }
+}
+
+fn handle_standard_operator(op: char, left: AST, right: AST) -> AST {
+    match op {
+        '&' => and(left, right),
+        '|' => or(left, right),
+        '>' => AST::Implication(boxed(left), boxed(right)),
+        '=' => AST::Equal(boxed(left), boxed(right)),
+        '^' => AST::Xor(boxed(left), boxed(right)),
+        _ => unreachable!(),
+    }
+}
+
+fn boxed(ast: AST) -> Box<AST> {
+    Box::new(ast)
+}
+
+fn negation(operand: AST) -> AST {
+    AST::Negation(boxed(operand))
+}
+
+fn and(left: AST, right: AST) -> AST {
+    AST::And(boxed(left), boxed(right))
+}
+
+fn or(left: AST, right: AST) -> AST {
+    AST::Or(boxed(left), boxed(right))
+}
+
+fn implication(left: AST, right: AST) -> AST {
+    or(negation(left), right)
+}
+
+fn equivalence(left: AST, right: AST) -> AST {
+    let left_implies_right = or(negation(left.clone()), right.clone());
+    let right_implies_left = or(negation(right), left);
+    and(left_implies_right, right_implies_left)
+}
+
+fn xor(left: AST, right: AST) -> AST {
+    let case1 = and(left.clone(), negation(right.clone()));
+    let case2 = and(negation(left), right);
+    or(case1, case2)
+}
+
+fn to_nnf(node: AST) -> AST
+{
+    match node {
+        AST::Variable(c) => AST::Variable(c),
+        AST::Negation(child) => match *child {
+            AST::Negation(inner_child) => to_nnf(*inner_child),
+            AST::And(left, right) => AST::Or(
+                Box::new(to_nnf(AST::Negation(left))),
+                Box::new(to_nnf(AST::Negation(right))),
+            ),
+            AST::Or(left, right) => AST::And(
+                Box::new(to_nnf(AST::Negation(left))),
+                Box::new(to_nnf(AST::Negation(right))),
+            ),
+            other => AST::Negation(Box::new(to_nnf(other))),
+        },
+        AST::And(left, right) => AST::And(Box::new(to_nnf(*left)), Box::new(to_nnf(*right))),
+        AST::Or(left, right) => AST::Or(Box::new(to_nnf(*left)), Box::new(to_nnf(*right))),
+		_ => panic!("Unsupported AST node type.")
+    }
+}
+
+fn collect_literals(node: AST, literals: &mut Vec<AST>)
+{
+    match node {
+        AST::Or(left, right) => {
+            collect_literals(*left, literals);
+            collect_literals(*right, literals);
+        }
+        _ => literals.push(node),
+    }
+}
+
+fn build_right_associative_or(literals: Vec<AST>) -> AST
+{
+    let mut literals = literals.into_iter().collect::<Vec<_>>();
+    if literals.is_empty() {
+        panic!("No literals to build OR");
+    }
+    let mut current = literals.pop().expect("Literals list is empty");
+    while let Some(lit) = literals.pop() {
+        current = AST::Or(Box::new(lit), Box::new(current));
+    }
+    current
+}
+
+fn collect_clauses(node: AST, clauses: &mut Vec<AST>)
+{
+    match node {
+        AST::And(left, right) => {
+            collect_clauses(*left, clauses);
+            collect_clauses(*right, clauses);
+        }
+        _ => clauses.push(node),
+    }
+}
+
+fn build_right_associative_and(clauses: Vec<AST>) -> AST
+{
+    let mut clauses = clauses.into_iter().collect::<Vec<_>>();
+    if clauses.is_empty() {
+        panic!("No clauses to build AND");
+    }
+    let mut current = clauses.pop().expect("Clauses list is empty");
+    while let Some(clause) = clauses.pop() {
+        current = AST::And(Box::new(clause), Box::new(current));
+    }
+    current
+}
+
+fn to_cnf(node: AST) -> AST
+{
+    match node {
+        AST::Variable(c) => AST::Variable(c),
+        AST::Negation(child) => AST::Negation(child),
+        AST::And(left, right) => {
+            let left_cnf = to_cnf(*left);
+            let right_cnf = to_cnf(*right);
+            let mut clauses = Vec::new();
+            collect_clauses(left_cnf, &mut clauses);
+            collect_clauses(right_cnf, &mut clauses);
+            build_right_associative_and(clauses)
+        }
+        AST::Or(left, right) => {
+            let left_cnf = to_cnf(*left);
+            let right_cnf = to_cnf(*right);
+            match (left_cnf, right_cnf) {
+                (AST::And(a, b), c) => {
+                    let or1 = AST::Or(a, Box::new(c.clone()));
+                    let or2 = AST::Or(b, Box::new(c));
+                    AST::And(Box::new(to_cnf(or1)), Box::new(to_cnf(or2)))
+                }
+                (a, AST::And(b, c)) => {
+                    let or1 = AST::Or(Box::new(a.clone()), b);
+                    let or2 = AST::Or(Box::new(a), c);
+                    AST::And(Box::new(to_cnf(or1)), Box::new(to_cnf(or2)))
+                }
+                (a, b) => {
+                    let mut literals = Vec::new();
+                    collect_literals(a, &mut literals);
+                    collect_literals(b, &mut literals);
+                    build_right_associative_or(literals)
+                }
+            }
+        }
+		_ => panic!("Unsupported AST node type.")
+    }
+}
+
+fn negation_normal_form(formula: &str) -> Result<String, String>
+{
+	let ast = parse_rpn(formula, true)?;
+	let nnf_ast = to_nnf(ast);
+	Ok(nnf_ast.to_string())
+}
+
+fn conjunctive_normal_form(formula: &str) -> Result<String, String>
+{
+    let ast = parse_rpn(formula, true)?;
+    let nnf_ast = to_nnf(ast);
+    let cnf_ast = to_cnf(nnf_ast);
+    Ok(cnf_ast.to_string())
+}
+
+fn sat(formula: &str) -> Result<bool, String>
+{
+	let mut vars = get_variables(formula).0;
 
 	let keys: Vec<char> = vars.keys().cloned().collect();
 
 	for i in 0..2_u32.pow(vars.len() as u32)
 	{
-		let binary  = to_binary_list(i, vars.len());
+		let binary: Vec<u32>  = to_binary_list(i, vars.len());
 
 		for (index, key) in keys.iter().enumerate()
 		{
 			vars.insert(*key, binary[index]);
 		}
 
-		let mut temp_str = String::from(formula);
+		let ast = generate_ast(formula, &vars)?;
 
-		for (key, value) in vars.iter()
-		{		
-			temp_str = temp_str.replace(key.to_string().as_str(), value.to_string().as_str());
-		}
-
-		print_row(&vars, eval_formula(&temp_str));
-	}
-}
-
-// fn expand_formula(formula: &str)
-// {
-
-// }
-
-// fn main() {
-// 	// println!("{}", adder(2, 3));
-// 	// println!("{}", multiplier(2, 10));
-// 	// println!("{}", gray_code(7));
-// 	// println!("{}", eval_formula("11>"));
-// 	print_truth_table("AB&C|");
-// 	eval_formula("10|");
-// }
-
-use std::fmt;
-use std::str::Chars;
-
-#[derive(Debug, Clone)]
-enum AST {
-	Variable(char),
-	Negation(Box<AST>),
-	And(Box<AST>, Box<AST>),
-	Or(Box<AST>, Box<AST>),
-}
-
-impl fmt::Display for AST {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		match self {
-			AST::Variable(c) => write!(f, "{}", c),
-			AST::Negation(child) => write!(f, "{}!", child),
-			AST::And(left, right) => write!(f, "{}{}&", left, right),
-			AST::Or(left, right) => write!(f, "{}{}|", left, right),
-		}
-	}
-}
-
-fn parse_rpn(s: &str) -> Result<AST, String> {
-	let mut stack: Vec<AST> = Vec::new();
-	let mut iter = s.chars();
-
-	while let Some(c) = iter.next() {
-		match c {
-			'A'..='Z' => stack.push(AST::Variable(c)),
-			'!' => {
-				let operand = stack.pop().ok_or("Missing operand for !".to_string())?;
-				stack.push(AST::Negation(Box::new(operand)));
-			}
-			'&' | '|' | '>' | '=' | '^' => {
-				let right = stack.pop().ok_or("Missing right operand".to_string())?;
-				let left = stack.pop().ok_or("Missing left operand".to_string())?;
-
-				match c {
-					'&' => stack.push(AST::And(Box::new(left), Box::new(right))),
-					'|' => stack.push(AST::Or(Box::new(left), Box::new(right))),
-					'>' => {
-						// Implication: A > B → !A | B
-						let not_left = AST::Negation(Box::new(left));
-						stack.push(AST::Or(Box::new(not_left), Box::new(right)));
-					}
-					'=' => {
-						// Equivalence: A = B → (!A | B) & (!B | A)
-						let left1 = AST::Negation(Box::new(left.clone()));
-						let left2 = AST::Or(Box::new(left1), Box::new(right.clone()));
-						let right1 = AST::Negation(Box::new(right));
-						let right2 = AST::Or(Box::new(right1), Box::new(left));
-						stack.push(AST::And(Box::new(left2), Box::new(right2)));
-					}
-					'^' => {
-						// XOR: A ^ B → (A & !B) | (!A & B)
-						let case1 = AST::And(
-							Box::new(left.clone()),
-							Box::new(AST::Negation(Box::new(right.clone()))),
-						);
-						let case2 = AST::And(
-							Box::new(AST::Negation(Box::new(left))),
-							Box::new(right),
-						);
-						stack.push(AST::Or(Box::new(case1), Box::new(case2)));
-					}
-					_ => unreachable!(),
-				}
-			}
-			_ => return Err(format!("Invalid character: {}", c)),
+		if eval_formula_ast(&ast)
+		{
+			return Ok(true);
 		}
 	}
 
-	if stack.len() != 1 {
-		Err("Invalid RPN expression".to_string())
-	} else {
-		stack.pop().ok_or("Empty expression".to_string())
-	}
-}
+	Ok(false)
 
-fn to_nnf(node: AST) -> AST {
-	match node {
-		AST::Variable(c) => AST::Variable(c),
-		AST::Negation(child) => match *child {
-			AST::Negation(inner_child) => to_nnf(*inner_child),
-			AST::And(left, right) => AST::Or(
-				Box::new(to_nnf(AST::Negation(left))),
-				Box::new(to_nnf(AST::Negation(right))),
-			),
-			AST::Or(left, right) => AST::And(
-				Box::new(to_nnf(AST::Negation(left))),
-				Box::new(to_nnf(AST::Negation(right))),
-			),
-			other => AST::Negation(Box::new(to_nnf(other))),
-		},
-		AST::And(left, right) => AST::And(Box::new(to_nnf(*left)), Box::new(to_nnf(*right))),
-		AST::Or(left, right) => AST::Or(Box::new(to_nnf(*left)), Box::new(to_nnf(*right))),
-	}
-}
-
-fn nnf(formula: &str) -> Result<String, String> {
-	let ast = parse_rpn(formula)?;
-	let nnf_ast = to_nnf(ast);
-	Ok(nnf_ast.to_string())
 }
 
 fn main() {
-	let test_cases = vec![
-		("AB&!", "A!B!|"),
-		("AB|!", "A!B!&"),
-		("A!!", "A"),
-		("AB>", "A!B|"),
-		("A", "A"),
-		("AB^", "AB!&A!B&|"),
-	];
 
-	for (input, expected) in test_cases {
-		match nnf(input) {
-			Ok(result) => {
-				println!("Input: {}", input);
-				println!("Output: {}", result);
-				println!("Expected: {}", expected);
-				assert_eq!(result, expected);
-				println!("Passed\n");
-			}
-			Err(e) => panic!("Error for {}: {}", input, e),
-		}
-	}
-}
-
-#[test]
-fn test_nnf() {
-	let test_cases = vec![
-		("AB&!", "A!B!|"),
-		("AB|!", "A!B!&"),
-		("A!!", "A"),
-		("AB>", "A!B|"),
-		("A", "A"),
-		("AB^", "AB!&A!B&|"),
-	];
-
-	for (input, expected) in test_cases {
-		let result = match nnf(input) {
-			Ok(res) => res,
-			Err(e) => panic!("Error for {}: {}", input, e),
-		};
-		assert_eq!(result, expected);
-	}
 }
