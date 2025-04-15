@@ -6,7 +6,7 @@
 /*   By: ggalon <ggalon@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 16:51:40 by ggalon            #+#    #+#             */
-/*   Updated: 2025/04/14 16:27:51 by ggalon           ###   ########.fr       */
+/*   Updated: 2025/04/15 14:34:05 by ggalon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,7 @@ const UNSUPPORTED_TYPE: &str = "Unsupported node type";
 const INDEX_OFR: &str = "Index out of range";
 
 #[derive(Debug, Clone)]
-enum AST {
+pub enum AST {
 	Variable(char),
 	Boolean(bool),
 	Negation(Box<AST>),
@@ -52,7 +52,7 @@ impl fmt::Display for AST {
 	}
 }
 
-fn adder(a: u32, b: u32) -> u32
+pub fn adder(a: u32, b: u32) -> u32
 {
 	if b == 0
 	{
@@ -64,7 +64,7 @@ fn adder(a: u32, b: u32) -> u32
 	return adder(a ^ b, carry)
 }
 
-fn multiplier(a: u32, b: u32) -> u32
+pub fn multiplier(a: u32, b: u32) -> u32
 {
 	if b == 0
 	{
@@ -81,27 +81,27 @@ fn multiplier(a: u32, b: u32) -> u32
 	return result
 }
 
-fn gray_code(n: u32) -> u32
+pub fn gray_code(n: u32) -> u32
 {
 	return n ^ (n >> 1)
 }
 
-// fn is_cond(c: char) -> bool
+// pub fn is_cond(c: char) -> bool
 // {
 // 	return c == '1' || c == '0'
 // }
 
-fn is_var(c: char) -> bool
+pub fn is_var(c: char) -> bool
 {
 	return c.is_ascii_uppercase()
 }
 
-fn is_ops(c: char) -> bool
+pub fn is_ops(c: char) -> bool
 {
 	return "!&|^>=".find(c).is_some()
 }
 
-fn btoc(b: bool) -> char
+pub fn btoc(b: bool) -> char
 {
 	match b
 	{
@@ -110,7 +110,7 @@ fn btoc(b: bool) -> char
 	}	
 }
 
-// fn ctob(c: char) -> bool
+// pub fn ctob(c: char) -> bool
 // {
 // 	match c
 // 	{
@@ -120,7 +120,7 @@ fn btoc(b: bool) -> char
 // 	}	
 // }
 
-fn eval_formula_ast(node: &AST) -> bool
+pub fn eval_formula_ast(node: &AST) -> bool
 {
 	match node
 	{
@@ -135,7 +135,7 @@ fn eval_formula_ast(node: &AST) -> bool
 	}
 }
 
-fn eval_formula(formula: &str) -> bool
+pub fn eval_formula(formula: &str) -> bool
 {
 	let ast = parse_rpn(formula, false);
 
@@ -143,7 +143,7 @@ fn eval_formula(formula: &str) -> bool
 }
 
 
-fn to_binary_list(mut num: u32, length: usize) -> Vec<u32>
+pub fn to_binary_list(mut num: u32, length: usize) -> Vec<u32>
 {
 	let mut binary_digits = Vec::new();
 
@@ -165,7 +165,7 @@ fn to_binary_list(mut num: u32, length: usize) -> Vec<u32>
 	return binary_digits
 }
 
-fn get_variables(formula: &str) -> (HashMap<char, u32>, Vec<char>)
+pub fn get_variables(formula: &str) -> (HashMap<char, u32>, Vec<char>)
 {
 	let mut vars: HashMap<char, u32> = HashMap::new();
 	let mut var_order: Vec<char> = Vec::new();
@@ -186,7 +186,7 @@ fn get_variables(formula: &str) -> (HashMap<char, u32>, Vec<char>)
 	(vars, var_order)
 }
 
-fn format_header(var_order: &[char]) -> String
+pub fn format_header(var_order: &[char]) -> String
 {
 	let mut output = String::new();
 	
@@ -203,7 +203,7 @@ fn format_header(var_order: &[char]) -> String
 	output
 }
 
-fn format_row(vars: &HashMap<char, u32>, var_order: &[char], result: bool) -> String
+pub fn format_row(vars: &HashMap<char, u32>, var_order: &[char], result: bool) -> String
 {
 	let mut output = String::new();
 	
@@ -217,7 +217,7 @@ fn format_row(vars: &HashMap<char, u32>, var_order: &[char], result: bool) -> St
 	output
 }
 
-fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> AST
+pub fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> AST
 {
 	let mut temp_str = String::from(formula);
 
@@ -229,7 +229,7 @@ fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> AST
 	parse_rpn(&temp_str, false)
 }
 
-fn print_truth_table(formula: &str) -> String
+pub fn print_truth_table(formula: &str) -> String
 {
 	let mut output = String::new();
 	let (mut vars, var_order) = get_variables(formula);
@@ -251,7 +251,7 @@ fn print_truth_table(formula: &str) -> String
 	output
 }
 
-fn parse_rpn(formula: &str, normal: bool) -> AST {
+pub fn parse_rpn(formula: &str, normal: bool) -> AST {
 	let mut stack = Vec::new();
 	
 	for c in formula.chars() {
@@ -284,7 +284,7 @@ fn parse_rpn(formula: &str, normal: bool) -> AST {
 	}
 }
 
-fn handle_normal_operator(op: char, left: AST, right: AST) -> AST {
+pub fn handle_normal_operator(op: char, left: AST, right: AST) -> AST {
 	match op {
 		'&' => and(left, right),
 		'|' => or(left, right),
@@ -295,7 +295,7 @@ fn handle_normal_operator(op: char, left: AST, right: AST) -> AST {
 	}
 }
 
-fn handle_standard_operator(op: char, left: AST, right: AST) -> AST {
+pub fn handle_standard_operator(op: char, left: AST, right: AST) -> AST {
 	match op {
 		'&' => and(left, right),
 		'|' => or(left, right),
@@ -306,39 +306,39 @@ fn handle_standard_operator(op: char, left: AST, right: AST) -> AST {
 	}
 }
 
-fn boxed(ast: AST) -> Box<AST> {
+pub fn boxed(ast: AST) -> Box<AST> {
 	Box::new(ast)
 }
 
-fn negation(operand: AST) -> AST {
+pub fn negation(operand: AST) -> AST {
 	AST::Negation(boxed(operand))
 }
 
-fn and(left: AST, right: AST) -> AST {
+pub fn and(left: AST, right: AST) -> AST {
 	AST::And(boxed(left), boxed(right))
 }
 
-fn or(left: AST, right: AST) -> AST {
+pub fn or(left: AST, right: AST) -> AST {
 	AST::Or(boxed(left), boxed(right))
 }
 
-fn implication(left: AST, right: AST) -> AST {
+pub fn implication(left: AST, right: AST) -> AST {
 	or(negation(left), right)
 }
 
-fn equivalence(left: AST, right: AST) -> AST {
+pub fn equivalence(left: AST, right: AST) -> AST {
 	let left_implies_right = or(negation(left.clone()), right.clone());
 	let right_implies_left = or(negation(right), left);
 	and(left_implies_right, right_implies_left)
 }
 
-fn xor(left: AST, right: AST) -> AST {
+pub fn xor(left: AST, right: AST) -> AST {
 	let case1 = and(left.clone(), negation(right.clone()));
 	let case2 = and(negation(left), right);
 	or(case1, case2)
 }
 
-fn to_nnf(node: AST) -> AST
+pub fn to_nnf(node: AST) -> AST
 {
 	match node {
 		AST::Variable(c) => AST::Variable(c),
@@ -360,7 +360,7 @@ fn to_nnf(node: AST) -> AST
 	}
 }
 
-fn collect_literals(node: AST, literals: &mut Vec<AST>)
+pub fn collect_literals(node: AST, literals: &mut Vec<AST>)
 {
 	match node {
 		AST::Or(left, right) => {
@@ -371,7 +371,7 @@ fn collect_literals(node: AST, literals: &mut Vec<AST>)
 	}
 }
 
-fn build_right_associative_or(literals: Vec<AST>) -> AST
+pub fn build_right_associative_or(literals: Vec<AST>) -> AST
 {
 	let mut literals = literals.into_iter().collect::<Vec<_>>();
 	if literals.is_empty() {
@@ -384,7 +384,7 @@ fn build_right_associative_or(literals: Vec<AST>) -> AST
 	current
 }
 
-fn collect_clauses(node: AST, clauses: &mut Vec<AST>)
+pub fn collect_clauses(node: AST, clauses: &mut Vec<AST>)
 {
 	match node {
 		AST::And(left, right) => {
@@ -395,7 +395,7 @@ fn collect_clauses(node: AST, clauses: &mut Vec<AST>)
 	}
 }
 
-fn build_right_associative_and(clauses: Vec<AST>) -> AST
+pub fn build_right_associative_and(clauses: Vec<AST>) -> AST
 {
 	let mut clauses = clauses.into_iter().collect::<Vec<_>>();
 	if clauses.is_empty() {
@@ -408,7 +408,7 @@ fn build_right_associative_and(clauses: Vec<AST>) -> AST
 	current
 }
 
-fn to_cnf(node: AST) -> AST
+pub fn to_cnf(node: AST) -> AST
 {
 	match node {
 		AST::Variable(c) => AST::Variable(c),
@@ -447,14 +447,14 @@ fn to_cnf(node: AST) -> AST
 	}
 }
 
-fn negation_normal_form(formula: &str) -> String
+pub fn negation_normal_form(formula: &str) -> String
 {
 	let ast = parse_rpn(formula, true);
 	let nnf_ast = to_nnf(ast);
 	nnf_ast.to_string()
 }
 
-fn conjunctive_normal_form(formula: &str) -> String
+pub fn conjunctive_normal_form(formula: &str) -> String
 {
 	let ast = parse_rpn(formula, true);
 	let nnf_ast = to_nnf(ast);
@@ -462,7 +462,7 @@ fn conjunctive_normal_form(formula: &str) -> String
 	cnf_ast.to_string()
 }
 
-fn sat(formula: &str) -> bool
+pub fn sat(formula: &str) -> bool
 {
 	let mut vars = get_variables(formula).0;
 
@@ -489,7 +489,7 @@ fn sat(formula: &str) -> bool
 
 }
 
-fn powerset(set: Vec<i32>) -> Vec<Vec<i32>>
+pub fn powerset(set: Vec<i32>) -> Vec<Vec<i32>>
 {
 	let mut result: Vec<Vec<i32>> = vec![vec![]];
 
@@ -512,7 +512,7 @@ fn powerset(set: Vec<i32>) -> Vec<Vec<i32>>
 	result
 }
 
-fn set_universe(sets: &Vec<Vec<i32>>) -> Vec<i32>
+pub fn set_universe(sets: &Vec<Vec<i32>>) -> Vec<i32>
 {
 	let mut universe = Vec::new();
 
@@ -527,94 +527,129 @@ fn set_universe(sets: &Vec<Vec<i32>>) -> Vec<i32>
 	universe
 }
 
-fn set_negation(set: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32>
+pub fn set_negation(set: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32>
 {
 	let result: Vec<i32> = universe.clone();
 	result.into_iter().filter(|x| !set.contains(x)).collect()
 }
 
-fn set_and(left: &Vec<i32>, right: &Vec<i32>) -> Vec<i32>
+pub fn set_and(left: &Vec<i32>, right: &Vec<i32>) -> Vec<i32>
 {
 	let result: Vec<i32> = left.clone();
 	result.into_iter().filter(|x| right.contains(x)).collect()
 }
 
-fn set_or(left: &Vec<i32>, right: &Vec<i32>) -> Vec<i32>
+pub fn set_or(left: &Vec<i32>, right: &Vec<i32>) -> Vec<i32>
 {
 	let mut result: Vec<i32> = left.clone();
 	result.extend(right.into_iter().filter(|x| !left.contains(x)));
 	result
 }
 
-fn set_xor(left: &Vec<i32>, right: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32>
+pub fn set_xor(left: &Vec<i32>, right: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32>
 {
 	let case1 = set_and(left, &set_negation(right, universe));
 	let case2 = set_and(&set_negation(left, universe), right);
 	set_or(&case1, &case2)
 }
 
-fn set_implication(left: &Vec<i32>, right: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32>
+pub fn set_implication(left: &Vec<i32>, right: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32>
 {
 	set_or(&set_negation(left, universe), right)
 }
 
-fn set_equivalence(left: &Vec<i32>, right: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32>
+pub fn set_equivalence(left: &Vec<i32>, right: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32>
 {
 	let left_implies_right = set_or(&set_negation(left, universe), right);
 	let right_implies_left = set_or(left, &set_negation(right, universe));
 	set_and(&left_implies_right, &right_implies_left)
 }
 
-fn eval_set_ast(node: &AST, sets: &Vec<Vec<i32>>, universe: &Vec<i32>) -> Vec<i32>
+pub fn eval_set_ast(node: &AST, sets: &Vec<Vec<i32>>, universe: &Vec<i32>) -> Vec<i32>
 {
 	match node {
-        AST::Variable(c) => {
-            let index = *c as usize - 65;
-            if index >= sets.len() {
+		AST::Variable(c) => {
+			let index = *c as usize - 65;
+			if index >= sets.len() {
 				panic!("{}", INDEX_OFR);
 			}
 			sets[index].clone()
-        },
-        AST::Negation(child) => {
-            let child_set = eval_set_ast(child, sets, universe);
-            set_negation(&child_set, universe)
-        },
-        AST::And(left, right) => {
-            let left_set = eval_set_ast(left, sets, universe);
-            let right_set = eval_set_ast(right, sets, universe);
-            set_and(&left_set, &right_set)
-        },
-        AST::Or(left, right) => {
-            let left_set = eval_set_ast(left, sets, universe);
-            let right_set = eval_set_ast(right, sets, universe);
-            set_or(&left_set, &right_set)
-        },
-        AST::Xor(left, right) => {
-            let left_set = eval_set_ast(left, sets, universe);
-            let right_set = eval_set_ast(right, sets, universe);
-            set_xor(&left_set, &right_set, universe)
-        },
-        AST::Implication(left, right) => {
-            let left_set = eval_set_ast(left, sets, universe);
-            let right_set = eval_set_ast(right, sets, universe);
-            set_implication(&left_set, &right_set, universe)
-        },
-        AST::Equal(left, right) => {
-            let left_set = eval_set_ast(left, sets, universe);
-            let right_set = eval_set_ast(right, sets, universe);
-            set_equivalence(&left_set, &right_set, universe)
-        },
-        _ => panic!("{}", UNSUPPORTED_TYPE),
-    }
+		},
+		AST::Negation(child) => {
+			let child_set = eval_set_ast(child, sets, universe);
+			set_negation(&child_set, universe)
+		},
+		AST::And(left, right) => {
+			let left_set = eval_set_ast(left, sets, universe);
+			let right_set = eval_set_ast(right, sets, universe);
+			set_and(&left_set, &right_set)
+		},
+		AST::Or(left, right) => {
+			let left_set = eval_set_ast(left, sets, universe);
+			let right_set = eval_set_ast(right, sets, universe);
+			set_or(&left_set, &right_set)
+		},
+		AST::Xor(left, right) => {
+			let left_set = eval_set_ast(left, sets, universe);
+			let right_set = eval_set_ast(right, sets, universe);
+			set_xor(&left_set, &right_set, universe)
+		},
+		AST::Implication(left, right) => {
+			let left_set = eval_set_ast(left, sets, universe);
+			let right_set = eval_set_ast(right, sets, universe);
+			set_implication(&left_set, &right_set, universe)
+		},
+		AST::Equal(left, right) => {
+			let left_set = eval_set_ast(left, sets, universe);
+			let right_set = eval_set_ast(right, sets, universe);
+			set_equivalence(&left_set, &right_set, universe)
+		},
+		_ => panic!("{}", UNSUPPORTED_TYPE),
+	}
 }
 
-fn eval_set(formula: &str, sets: Vec<Vec<i32>>) -> Vec<i32>
+pub fn eval_set(formula: &str, sets: Vec<Vec<i32>>) -> Vec<i32>
 {
 	let ast = parse_rpn(formula, false);
 	let universe = set_universe(&sets);
 	eval_set_ast(&ast, &sets, &universe)
 }
 
-fn main() {
-
+pub fn interleave(n: u16) -> u32 {
+	let mut x = n as u32;
+	x = (x | (x << 8)) & 0x00FF00FF;
+	x = (x | (x << 4)) & 0x0F0F0F0F;
+	x = (x | (x << 2)) & 0x33333333;
+	x = (x | (x << 1)) & 0x55555555;
+	x
 }
+
+pub fn reverse_interleave(n: u32) -> (u16, u16) {
+	let mut x = n & 0x55555555;
+	x = (x | (x >> 1)) & 0x33333333;
+	x = (x | (x >> 2)) & 0x0F0F0F0F;
+	x = (x | (x >> 4)) & 0x00FF00FF;
+	x = (x | (x >> 8)) & 0x0000FFFF;
+	
+	let mut y = (n >> 1) & 0x55555555;
+	y = (y | (y >> 1)) & 0x33333333;
+	y = (y | (y >> 2)) & 0x0F0F0F0F;
+	y = (y | (y >> 4)) & 0x00FF00FF;
+	y = (y | (y >> 8)) & 0x0000FFFF;
+	
+	(x as u16, y as u16)
+}
+
+pub fn map(x: u16, y: u16) -> f64
+{
+	let result = (interleave(x) | (interleave(y) << 1)) as f64;
+	result / u32::MAX as f64
+}
+
+pub fn reverse_map(n: f64) -> (u16, u16)
+{
+	let result = n * u32::MAX as f64;
+	reverse_interleave(result as u32)
+}
+
+pub fn main() {}

@@ -8,6 +8,8 @@ use crate::conjunctive_normal_form;
 use crate::sat;
 use crate::powerset;
 use crate::eval_set;
+use crate::map;
+use crate::reverse_map;
 
 #[test]
 fn test_adder(){
@@ -180,4 +182,38 @@ fn test_eval_set() {
         let result = eval_set(formula, sets);
         assert_eq!(result, expected);
     }
+}
+
+#[test]
+fn test_map() {
+	let test_cases = vec![
+		((0,0), 0.),
+		((1,0), 0.00000000023283064370807974),
+		((0,1), 0.0000000004656612874161595),
+		((1,1), 0.0000000006984919311242392),
+		((42,24), 0.0000004032626749023941),
+		((u16::MAX, u16::MAX), 1.),
+	];
+
+	for (input, expected) in test_cases {
+		let result = map(input.0, input.1);
+		assert_eq!(result, expected);
+	}
+}
+
+#[test]
+fn test_reverse_map() {
+	let test_cases = vec![
+		(0., (0,0)),
+		(0.00000000023283064370807974, (1,0)),
+		(0.0000000004656612874161595, (0,1)),
+		(0.0000000006984919311242392, (1,1)),
+		(0.0000004032626749023941, (42,24)),
+		(1., (u16::MAX, u16::MAX)),
+	];
+
+	for (input, expected) in test_cases {
+		let result = reverse_map(input);
+		assert_eq!(result, expected);
+	}
 }
