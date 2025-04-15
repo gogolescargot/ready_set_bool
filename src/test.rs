@@ -1,15 +1,6 @@
-use crate::adder;
-use crate::multiplier;
-use crate::gray_code;
-use crate::eval_formula;
-use crate::print_truth_table;
-use crate::negation_normal_form;
-use crate::conjunctive_normal_form;
-use crate::sat;
-use crate::powerset;
-use crate::eval_set;
-use crate::map;
-use crate::reverse_map;
+#[cfg(test)]
+use crate::{adder, multiplier, gray_code, eval_formula, print_truth_table, negation_normal_form, 
+			conjunctive_normal_form, sat, powerset, eval_set, map, reverse_map};
 
 #[test]
 fn test_adder(){
