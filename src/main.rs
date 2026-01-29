@@ -52,16 +52,13 @@ impl fmt::Display for AST {
 	}
 }
 
-pub fn power(mut base: u32, mut exp: u32) -> u32 {
+pub fn power(base: u32, exp: u32) -> u32 {
+	if exp == 0 {
+		return 1;
+	}
 	let mut result: u32 = 1;
-	while exp > 0 {
-		if (exp & 1) == 1 {
-			result = result.wrapping_mul(base);
-		}
-		exp >>= 1;
-		if exp > 0 {
-			base = base.wrapping_mul(base);
-		}
+	for _ in 0..exp {
+		result *= base;
 	}
 	return result;
 }
