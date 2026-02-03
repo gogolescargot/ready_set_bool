@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.rs                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ggalon <ggalon@student.42lyon.fr>          +#+  +:+       +#+        */
+/*   By: ggalon <ggalon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 16:51:40 by ggalon            #+#    #+#             */
-/*   Updated: 2025/04/15 14:46:38 by ggalon           ###   ########.fr       */
+/*   Updated: 2026/02/03 20:29:31 by ggalon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,41 +64,51 @@ impl fmt::Display for AST {
 	}
 }
 
-/// Computes `base^exp` (integer exponentiation) iteratively.
-pub fn power(base: u32, exp: u32) -> u32 {
+/// Computes `base^exp`.
+pub fn power(mut base: u32, mut exp: u32) -> u32 {
 	if exp == 0 {
 		return 1;
 	}
-	let mut result: u32 = 1;
-	for _ in 0..exp {
-		result *= base;
+
+	let mut result = 1;
+
+	while exp != 0 {
+		if (exp & 1) != 0 {
+			result = multiplier(result, base);
+		}
+		base = multiplier(base, base);
+		exp >>= 1;
 	}
+
 	return result;
 }
 
-/// Adds two integers using only bitwise operations.
-///
-/// Recursive implementation: `xor` for the sum without carry, `and<<1` for the carry.
+/// Adds two integers.
 pub fn adder(a: u32, b: u32) -> u32 {
-	if b == 0 {
-		return a;
+	let mut sum = a;
+	let mut carry = b;
+
+	while carry != 0 {
+		let temp = sum;
+		sum = sum ^ carry;
+		carry = (temp & carry) << 1;
 	}
 
-	let carry = (a & b) << 1;
-
-	return adder(a ^ b, carry);
+	return sum;
 }
 
-/// Multiplies `a*b` via repeated additions (uses `adder`).
+/// Multiplies two integers.
 pub fn multiplier(a: u32, b: u32) -> u32 {
-	if b == 0 {
-		return 0;
-	}
+	let mut result = 0u32;
+	let mut x = a;
+	let mut y = b;
 
-	let mut result = a;
-
-	for _ in 1..b {
-		result = adder(result, a)
+	while y != 0 {
+		if (y & 1) != 0 {
+			result = adder(result, x);
+		}
+		x = x << 1;
+		y = y >> 1;
 	}
 
 	return result;
