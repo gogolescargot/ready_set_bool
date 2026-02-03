@@ -10,6 +10,14 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+//! Utility functions around propositional logic and set operations.
+//!
+//! - Parse formulas written in Reverse Polish Notation (RPN) into an AST.
+//! - Evaluate boolean formulas, generate truth tables, and run a naive SAT check.
+//! - Transformations to NNF/CNF.
+//! - Evaluate formulas as set operations.
+//! - Morton (Z-order) encode/decode to map `(x, y)` → `[0, 1]`.
+
 mod test;
 
 use std::collections::HashMap;
@@ -25,6 +33,10 @@ const EMPTY_LIST: &str = "Empty list";
 const UNSUPPORTED_TYPE: &str = "Unsupported node type";
 const INDEX_OFR: &str = "Index out of range";
 
+/// AST node for boolean formulas and set formulas.
+///
+/// Variables are the letters `A..Z` and are represented as `char`.
+/// Operators follow the usual boolean semantics.
 #[derive(Debug, Clone)]
 pub enum AST {
 	Variable(char),
@@ -52,6 +64,7 @@ impl fmt::Display for AST {
 	}
 }
 
+/// Computes `base^exp` (integer exponentiation) iteratively.
 pub fn power(base: u32, exp: u32) -> u32 {
 	if exp == 0 {
 		return 1;
@@ -63,6 +76,9 @@ pub fn power(base: u32, exp: u32) -> u32 {
 	return result;
 }
 
+/// Adds two integers using only bitwise operations.
+///
+/// Recursive implementation: `xor` for the sum without carry, `and<<1` for the carry.
 pub fn adder(a: u32, b: u32) -> u32 {
 	if b == 0 {
 		return a;
@@ -73,6 +89,7 @@ pub fn adder(a: u32, b: u32) -> u32 {
 	return adder(a ^ b, carry);
 }
 
+/// Multiplies `a*b` via repeated additions (uses `adder`).
 pub fn multiplier(a: u32, b: u32) -> u32 {
 	if b == 0 {
 		return 0;
@@ -87,6 +104,7 @@ pub fn multiplier(a: u32, b: u32) -> u32 {
 	return result;
 }
 
+/// Returns the Gray code of `n`: `n ^ (n >> 1)`.
 pub fn gray_code(n: u32) -> u32 {
 	return n ^ (n >> 1);
 }
@@ -96,14 +114,17 @@ pub fn gray_code(n: u32) -> u32 {
 // 	return c == '1' || c == '0'
 // }
 
+/// Returns whether `c` is a valid variable (ASCII uppercase letter `A..Z`).
 pub fn is_var(c: char) -> bool {
 	return c.is_ascii_uppercase();
 }
 
+/// Returns whether `c` is a supported RPN operator.
 pub fn is_ops(c: char) -> bool {
 	return "!&|^>=".find(c).is_some();
 }
 
+/// Converts a boolean to the character `'1'` or `'0'`.
 pub fn btoc(b: bool) -> char {
 	match b {
 		true => '1',
@@ -121,6 +142,10 @@ pub fn btoc(b: bool) -> char {
 // 	}
 // }
 
+/// Evaluates an AST as a boolean formula.
+///
+/// # Panics
+/// Panics if the node is not a supported boolean form.
 pub fn eval_formula_ast(node: &AST) -> bool {
 	match node {
 		AST::Boolean(bool) => *bool,
@@ -134,12 +159,16 @@ pub fn eval_formula_ast(node: &AST) -> bool {
 	}
 }
 
+/// Parses then evaluates an RPN (boolean) formula.
 pub fn eval_formula(formula: &str) -> bool {
 	let ast = parse_rpn(formula, false);
 
 	eval_formula_ast(&ast)
 }
 
+/// Converts `num` into a list of bits (0/1) of length `length`.
+///
+/// The list is ordered from most significant bit to least significant bit.
 pub fn to_binary_list(mut num: u32, length: usize) -> Vec<u32> {
 	let mut binary_digits = Vec::new();
 
@@ -161,6 +190,14 @@ pub fn to_binary_list(mut num: u32, length: usize) -> Vec<u32> {
 	return binary_digits;
 }
 
+/// Extracts the variables appearing in `formula`.
+///
+/// Returns:
+/// - a map `variable -> value` initialized to 0
+/// - the variable appearance order
+///
+/// # Panics
+/// Panics if a character is neither a variable (`A..Z`) nor an operator.
 pub fn get_variables(formula: &str) -> (HashMap<char, u32>, Vec<char>) {
 	let mut vars: HashMap<char, u32> = HashMap::new();
 	let mut var_order: Vec<char> = Vec::new();
@@ -177,6 +214,7 @@ pub fn get_variables(formula: &str) -> (HashMap<char, u32>, Vec<char>) {
 	(vars, var_order)
 }
 
+/// Formats the Markdown header of a truth table.
 pub fn format_header(var_order: &[char]) -> String {
 	let mut output = String::new();
 
@@ -193,6 +231,7 @@ pub fn format_header(var_order: &[char]) -> String {
 	output
 }
 
+/// Formats one Markdown row of a truth table.
 pub fn format_row(vars: &HashMap<char, u32>, var_order: &[char], result: bool) -> String {
 	let mut output = String::new();
 
@@ -206,6 +245,7 @@ pub fn format_row(vars: &HashMap<char, u32>, var_order: &[char], result: bool) -
 	output
 }
 
+/// Replaces variables by their values (0/1), then parses into an AST.
 pub fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> AST {
 	let mut temp_str = String::from(formula);
 
@@ -216,6 +256,7 @@ pub fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> AST {
 	parse_rpn(&temp_str, false)
 }
 
+/// Builds a Markdown truth table for an RPN formula.
 pub fn print_truth_table(formula: &str) -> String {
 	let mut output = String::new();
 	let (mut vars, var_order) = get_variables(formula);
@@ -235,6 +276,13 @@ pub fn print_truth_table(formula: &str) -> String {
 	output
 }
 
+/// Parses a Reverse Polish Notation (RPN) formula into an `AST`.
+///
+/// If `normal` is `true`, some operators are rewritten using helpers
+/// (e.g. implication/equivalence). Otherwise, the "standard" AST is built.
+///
+/// # Panics
+/// Panics if the expression is invalid (empty stack, unknown character, etc.).
 pub fn parse_rpn(formula: &str, normal: bool) -> AST {
 	let mut stack = Vec::new();
 
@@ -268,6 +316,7 @@ pub fn parse_rpn(formula: &str, normal: bool) -> AST {
 	}
 }
 
+/// Builds an operator node in "normal" mode (with rewrites).
 pub fn handle_normal_operator(op: char, left: AST, right: AST) -> AST {
 	match op {
 		'&' => and(left, right),
@@ -279,6 +328,7 @@ pub fn handle_normal_operator(op: char, left: AST, right: AST) -> AST {
 	}
 }
 
+/// Builds an operator node in "standard" mode (no rewrites).
 pub fn handle_standard_operator(op: char, left: AST, right: AST) -> AST {
 	match op {
 		'&' => and(left, right),
@@ -290,38 +340,51 @@ pub fn handle_standard_operator(op: char, left: AST, right: AST) -> AST {
 	}
 }
 
+/// Helper: boxes an `AST` (avoids repeating `Box::new`).
 pub fn boxed(ast: AST) -> Box<AST> {
 	Box::new(ast)
 }
 
+/// Creates a negation: `!operand`.
 pub fn negation(operand: AST) -> AST {
 	AST::Negation(boxed(operand))
 }
 
+/// Creates a logical AND.
 pub fn and(left: AST, right: AST) -> AST {
 	AST::And(boxed(left), boxed(right))
 }
 
+/// Creates a logical OR.
 pub fn or(left: AST, right: AST) -> AST {
 	AST::Or(boxed(left), boxed(right))
 }
 
+/// Builds `left ⇒ right` using the rewrite `¬left ∨ right`.
 pub fn implication(left: AST, right: AST) -> AST {
 	or(negation(left), right)
 }
 
+/// Builds `left ⇔ right` as `(left ⇒ right) ∧ (right ⇒ left)`.
 pub fn equivalence(left: AST, right: AST) -> AST {
 	let left_implies_right = or(negation(left.clone()), right.clone());
 	let right_implies_left = or(negation(right), left);
 	and(left_implies_right, right_implies_left)
 }
 
+/// Builds a logical XOR using an AND/OR/NOT rewrite.
 pub fn xor(left: AST, right: AST) -> AST {
 	let case1 = and(left.clone(), negation(right.clone()));
 	let case2 = and(negation(left), right);
 	or(case1, case2)
 }
 
+/// Converts an AST to Negation Normal Form (NNF).
+///
+/// Pushes negations down to the leaves using De Morgan's laws.
+///
+/// # Panics
+/// Panics if the node contains a type that is not supported in this context.
 pub fn to_nnf(node: AST) -> AST {
 	match node {
 		AST::Variable(c) => AST::Variable(c),
@@ -343,6 +406,7 @@ pub fn to_nnf(node: AST) -> AST {
 	}
 }
 
+/// Collects literals under an OR (flattens a chain of `Or`).
 pub fn collect_literals(node: AST, literals: &mut Vec<AST>) {
 	match node {
 		AST::Or(left, right) => {
@@ -353,6 +417,10 @@ pub fn collect_literals(node: AST, literals: &mut Vec<AST>) {
 	}
 }
 
+/// Rebuilds a right-associative OR from a list of literals.
+///
+/// # Panics
+/// Panics if `literals` is empty.
 pub fn build_right_associative_or(literals: Vec<AST>) -> AST {
 	let mut literals = literals.into_iter().collect::<Vec<_>>();
 	if literals.is_empty() {
@@ -365,6 +433,7 @@ pub fn build_right_associative_or(literals: Vec<AST>) -> AST {
 	current
 }
 
+/// Collects clauses under an AND (flattens a chain of `And`).
 pub fn collect_clauses(node: AST, clauses: &mut Vec<AST>) {
 	match node {
 		AST::And(left, right) => {
@@ -375,6 +444,10 @@ pub fn collect_clauses(node: AST, clauses: &mut Vec<AST>) {
 	}
 }
 
+/// Rebuilds a right-associative AND from a list of clauses.
+///
+/// # Panics
+/// Panics if `clauses` is empty.
 pub fn build_right_associative_and(clauses: Vec<AST>) -> AST {
 	let mut clauses = clauses.into_iter().collect::<Vec<_>>();
 	if clauses.is_empty() {
@@ -387,6 +460,12 @@ pub fn build_right_associative_and(clauses: Vec<AST>) -> AST {
 	current
 }
 
+/// Converts an AST to Conjunctive Normal Form (CNF).
+///
+/// Applies distributivity to push OR above AND.
+///
+/// # Panics
+/// Panics if the node contains a type that is not supported in this context.
 pub fn to_cnf(node: AST) -> AST {
 	match node {
 		AST::Variable(c) => AST::Variable(c),
@@ -425,12 +504,14 @@ pub fn to_cnf(node: AST) -> AST {
 	}
 }
 
+/// Returns an RPN representation of the formula converted to NNF.
 pub fn negation_normal_form(formula: &str) -> String {
 	let ast = parse_rpn(formula, true);
 	let nnf_ast = to_nnf(ast);
 	nnf_ast.to_string()
 }
 
+/// Returns an RPN representation of the formula converted to CNF.
 pub fn conjunctive_normal_form(formula: &str) -> String {
 	let ast = parse_rpn(formula, true);
 	let nnf_ast = to_nnf(ast);
@@ -438,6 +519,10 @@ pub fn conjunctive_normal_form(formula: &str) -> String {
 	cnf_ast.to_string()
 }
 
+/// Checks whether `formula` is satisfiable (SAT) by brute force.
+///
+/// Tries every possible assignment of the variables (2^n) and stops
+/// as soon as one assignment makes the formula true.
 pub fn sat(formula: &str) -> bool {
 	let mut vars = get_variables(formula).0;
 
@@ -460,6 +545,9 @@ pub fn sat(formula: &str) -> bool {
 	false
 }
 
+/// Computes the powerset of a set represented as a `Vec`.
+///
+/// The result contains all possible sub-lists (including the empty set).
 pub fn powerset(set: Vec<i32>) -> Vec<Vec<i32>> {
 	let mut result: Vec<Vec<i32>> = vec![vec![]];
 
@@ -478,6 +566,9 @@ pub fn powerset(set: Vec<i32>) -> Vec<Vec<i32>> {
 	result
 }
 
+/// Builds the universe: the union of all elements present in `sets`.
+///
+/// Duplicates are removed.
 pub fn set_universe(sets: &Vec<Vec<i32>>) -> Vec<i32> {
 	let mut universe = Vec::new();
 
@@ -492,38 +583,53 @@ pub fn set_universe(sets: &Vec<Vec<i32>>) -> Vec<i32> {
 	universe
 }
 
+/// Complement of `set` relative to `universe`.
 pub fn set_negation(set: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32> {
 	let result: Vec<i32> = universe.clone();
 	result.into_iter().filter(|x| !set.contains(x)).collect()
 }
 
+/// Intersection: `left ∩ right`.
 pub fn set_and(left: &Vec<i32>, right: &Vec<i32>) -> Vec<i32> {
 	let result: Vec<i32> = left.clone();
 	result.into_iter().filter(|x| right.contains(x)).collect()
 }
 
+/// Union: `left ∪ right` (without duplicates).
 pub fn set_or(left: &Vec<i32>, right: &Vec<i32>) -> Vec<i32> {
 	let mut result: Vec<i32> = left.clone();
 	result.extend(right.into_iter().filter(|x| !left.contains(x)));
 	result
 }
 
+/// Symmetric difference: `left △ right`.
+///
+/// Uses `universe` to compute the required complements.
 pub fn set_xor(left: &Vec<i32>, right: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32> {
 	let case1 = set_and(left, &set_negation(right, universe));
 	let case2 = set_and(&set_negation(left, universe), right);
 	set_or(&case1, &case2)
 }
 
+/// Set implication: `¬left ∪ right`.
 pub fn set_implication(left: &Vec<i32>, right: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32> {
 	set_or(&set_negation(left, universe), right)
 }
 
+/// Set equivalence: `(left ⇒ right) ∩ (right ⇒ left)`.
 pub fn set_equivalence(left: &Vec<i32>, right: &Vec<i32>, universe: &Vec<i32>) -> Vec<i32> {
 	let left_implies_right = set_or(&set_negation(left, universe), right);
 	let right_implies_left = set_or(left, &set_negation(right, universe));
 	set_and(&left_implies_right, &right_implies_left)
 }
 
+/// Evaluates an AST as a set expression.
+///
+/// Variables `A..Z` address `sets[0]..sets[25]`. `universe` is used
+/// to define the complement for negations.
+///
+/// # Panics
+/// Panics if a variable references an out-of-range index.
 pub fn eval_set_ast(node: &AST, sets: &Vec<Vec<i32>>, universe: &Vec<i32>) -> Vec<i32> {
 	match node {
 		AST::Variable(c) => {
@@ -566,12 +672,16 @@ pub fn eval_set_ast(node: &AST, sets: &Vec<Vec<i32>>, universe: &Vec<i32>) -> Ve
 	}
 }
 
+/// Parses then evaluates an RPN formula as an operation over `sets`.
 pub fn eval_set(formula: &str, sets: Vec<Vec<i32>>) -> Vec<i32> {
 	let ast = parse_rpn(formula, false);
 	let universe = set_universe(&sets);
 	eval_set_ast(&ast, &sets, &universe)
 }
 
+/// Spreads the 16 bits of `n` into the even positions of a `u32`.
+///
+/// Bit `i` of `n` is copied into position `2*i` of the result.
 pub fn interleave(n: u16) -> u32 {
 	let mut z = 0u32;
 	for i in 0..16 {
@@ -581,6 +691,10 @@ pub fn interleave(n: u16) -> u32 {
 	return z;
 }
 
+/// Decodes a 32-bit integer containing two interleaved bit streams.
+///
+/// - `x` receives the bits at even positions.
+/// - `y` receives the bits at odd positions.
 pub fn reverse_interleave(n: u32) -> (u16, u16) {
 	let mut x = 0u16;
 	let mut y = 0u16;
@@ -591,14 +705,20 @@ pub fn reverse_interleave(n: u32) -> (u16, u16) {
 	return (x, y);
 }
 
+/// Maps `(x, y)` to a real value in `[0, 1]` using a Morton (Z-order) code.
+///
+/// Combines `interleave(x)` (even bits) and `interleave(y) << 1` (odd bits),
+/// then normalizes by dividing by `u32::MAX`.
 pub fn map(x: u16, y: u16) -> f64 {
 	let result = (interleave(x) | (interleave(y) << 1)) as f64;
 	return result / u32::MAX as f64;
 }
 
+/// Inverse of `map`: rebuilds `(x, y)` from a normalized value.
 pub fn reverse_map(n: f64) -> (u16, u16) {
 	let result = n * u32::MAX as f64;
 	return reverse_interleave(result as u32);
 }
 
+/// Entry point (empty): this file mainly serves as a utilities/exercises library.
 pub fn main() {}
