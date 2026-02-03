@@ -109,11 +109,6 @@ pub fn gray_code(n: u32) -> u32 {
 	return n ^ (n >> 1);
 }
 
-// pub fn is_cond(c: char) -> bool
-// {
-// 	return c == '1' || c == '0'
-// }
-
 /// Returns whether `c` is a valid variable (ASCII uppercase letter `A..Z`).
 pub fn is_var(c: char) -> bool {
 	return c.is_ascii_uppercase();
@@ -131,16 +126,6 @@ pub fn btoc(b: bool) -> char {
 		false => '0',
 	}
 }
-
-// pub fn ctob(c: char) -> bool
-// {
-// 	match c
-// 	{
-// 		'1' => true,
-// 		'0' => false,
-// 		_ => panic!("{}{}", INVALID_CHAR, c),
-// 	}
-// }
 
 /// Evaluates an AST as a boolean formula.
 ///
