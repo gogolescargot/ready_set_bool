@@ -573,38 +573,32 @@ pub fn eval_set(formula: &str, sets: Vec<Vec<i32>>) -> Vec<i32> {
 }
 
 pub fn interleave(n: u16) -> u32 {
-	let mut x = n as u32;
-	x = (x | (x << 8)) & 0x00FF00FF;
-	x = (x | (x << 4)) & 0x0F0F0F0F;
-	x = (x | (x << 2)) & 0x33333333;
-	x = (x | (x << 1)) & 0x55555555;
-	x
+	let mut z = 0u32;
+	for i in 0..16 {
+		let bit = ((n >> i) & 1) as u32;
+		z |= bit << (2 * i);
+	}
+	return z;
 }
 
 pub fn reverse_interleave(n: u32) -> (u16, u16) {
-	let mut x = n & 0x55555555;
-	x = (x | (x >> 1)) & 0x33333333;
-	x = (x | (x >> 2)) & 0x0F0F0F0F;
-	x = (x | (x >> 4)) & 0x00FF00FF;
-	x = (x | (x >> 8)) & 0x0000FFFF;
-
-	let mut y = (n >> 1) & 0x55555555;
-	y = (y | (y >> 1)) & 0x33333333;
-	y = (y | (y >> 2)) & 0x0F0F0F0F;
-	y = (y | (y >> 4)) & 0x00FF00FF;
-	y = (y | (y >> 8)) & 0x0000FFFF;
-
-	(x as u16, y as u16)
+	let mut x = 0u16;
+	let mut y = 0u16;
+	for i in 0..16 {
+		x |= (((n >> (2 * i)) & 1) as u16) << i;
+		y |= (((n >> (2 * i + 1)) & 1) as u16) << i;
+	}
+	return (x, y);
 }
 
 pub fn map(x: u16, y: u16) -> f64 {
 	let result = (interleave(x) | (interleave(y) << 1)) as f64;
-	result / u32::MAX as f64
+	return result / u32::MAX as f64;
 }
 
 pub fn reverse_map(n: f64) -> (u16, u16) {
 	let result = n * u32::MAX as f64;
-	reverse_interleave(result as u32)
+	return reverse_interleave(result as u32);
 }
 
 pub fn main() {}
