@@ -88,7 +88,7 @@ pub fn adder(a: u32, b: u32) -> u32 {
 	let mut sum = a;
 	let mut carry = b;
 
-	while carry != 0 {
+	for _ in 0..32 {
 		let temp = sum;
 		sum = sum ^ carry;
 		carry = (temp & carry) << 1;
@@ -99,11 +99,11 @@ pub fn adder(a: u32, b: u32) -> u32 {
 
 /// Multiplies two integers.
 pub fn multiplier(a: u32, b: u32) -> u32 {
-	let mut result = 0u32;
+	let mut result = 0;
 	let mut x = a;
 	let mut y = b;
 
-	while y != 0 {
+	for _ in 0..32 {
 		if (y & 1) != 0 {
 			result = adder(result, x);
 		}
