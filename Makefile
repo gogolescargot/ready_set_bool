@@ -12,3 +12,6 @@ re: fclean all
 
 test:
 	cargo test
+
+doc:
+	cargo doc --open

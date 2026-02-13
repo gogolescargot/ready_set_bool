@@ -6,7 +6,7 @@
 /*   By: ggalon <ggalon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 16:51:40 by ggalon            #+#    #+#             */
-/*   Updated: 2026/02/03 20:29:31 by ggalon           ###   ########.fr       */
+/*   Updated: 2026/02/13 11:46:01 by ggalon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -209,7 +209,7 @@ pub fn get_variables(formula: &str) -> (HashMap<char, u32>, Vec<char>) {
 	(vars, var_order)
 }
 
-/// Formats the Markdown header of a truth table.
+/// Formats the header of a truth table.
 pub fn format_header(var_order: &[char]) -> String {
 	let mut output = String::new();
 
@@ -226,7 +226,7 @@ pub fn format_header(var_order: &[char]) -> String {
 	output
 }
 
-/// Formats one Markdown row of a truth table.
+/// Formats one row of a truth table.
 pub fn format_row(vars: &HashMap<char, u32>, var_order: &[char], result: bool) -> String {
 	let mut output = String::new();
 
@@ -251,7 +251,7 @@ pub fn generate_ast(formula: &str, vars: &HashMap<char, u32>) -> AST {
 	parse_rpn(&temp_str, false)
 }
 
-/// Builds a Markdown truth table for an RPN formula.
+/// Builds a truth table for an RPN formula.
 pub fn print_truth_table(formula: &str) -> String {
 	let mut output = String::new();
 	let (mut vars, var_order) = get_variables(formula);
